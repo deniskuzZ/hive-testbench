@@ -25,7 +25,8 @@ fi
 
 # Get the parameters.
 SCALE=$1
-DIR=$2
+UPDATE=$2
+DIR=$3
 if [ "X$DEBUG_SCRIPT" != "X" ]; then
 	set -x
 fi
@@ -47,7 +48,7 @@ hdfs dfs -mkdir -p ${DIR}
 hdfs dfs -ls ${DIR}/${SCALE} > /dev/null
 if [ $? -ne 0 ]; then
 	echo "Generating data at scale factor $SCALE."
-	(cd tpcds-gen; hadoop jar target/*.jar -d ${DIR}/${SCALE}/ -s ${SCALE} -u {})
+	(cd tpcds-gen; hadoop jar target/*.jar -d ${DIR}/${SCALE}/ -s ${SCALE} -u {UPDATE})
 fi
 hdfs dfs -ls ${DIR}/${SCALE} > /dev/null
 if [ $? -ne 0 ]; then
