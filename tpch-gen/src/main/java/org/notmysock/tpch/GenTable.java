@@ -63,6 +63,7 @@ public class GenTable extends Configured implements Tool {
         getConf().setInt("io.sort.mb", 4);
         org.apache.commons.cli.Options options = new org.apache.commons.cli.Options();
         options.addOption("s","scale", true, "scale");
+        options.addOption("u","update", true, "update");
         options.addOption("t","table", true, "table");
         options.addOption("d","dir", true, "dir");
         options.addOption("p", "parallel", true, "parallel");
@@ -77,6 +78,7 @@ public class GenTable extends Configured implements Tool {
         }
         
         int scale = Integer.parseInt(line.getOptionValue("scale"));
+        int update = Integer.parseInt(line.getOptionValue("update"));
         String table = "all";
         if(line.hasOption("table")) {
           table = line.getOptionValue("table");
@@ -95,7 +97,7 @@ public class GenTable extends Configured implements Tool {
           return 1;
         }
 
-        Path in = genInput(table, scale, parallel);
+        Path in = genInput(table, scale, update, parallel);
 
         Path dbgen = copyJar(new File("target/lib/dbgen.jar"));
         URI dsuri = dbgen.toUri();
@@ -164,7 +166,7 @@ public class GenTable extends Configured implements Tool {
       return dst; 
     }
 
-    public Path genInput(String table, int scale, int parallel) throws Exception {
+    public Path genInput(String table, int scale, int update, int parallel) throws Exception {
         long epoch = System.currentTimeMillis()/1000;
 
         Path in = new Path("/tmp/"+table+"_"+scale+"-"+epoch);
@@ -172,9 +174,9 @@ public class GenTable extends Configured implements Tool {
         FSDataOutputStream out = fs.create(in);
         for(int i = 1; i <= parallel; i++) {
           if(table.equals("all")) {
-            out.writeBytes(String.format("$DIR/dbgen/tools/dbgen -b $DIR/dbgen/tools/dists.dss -f -s %d -C %d -S %d\n", scale, parallel, i));
+            out.writeBytes(String.format("$DIR/dbgen/tools/dbgen -b $DIR/dbgen/tools/dists.dss -f -s %d -u %d -C %d -S %d\n", scale, update, parallel, i));
           } else {
-        	out.writeBytes(String.format("$DIR/dbgen/tools/dbgen -b $DIR/dbgen/tools/dists.dss -f -s %d -C %d -S %d -T %s\n", scale, parallel, i, table));           
+        	out.writeBytes(String.format("$DIR/dbgen/tools/dbgen -b $DIR/dbgen/tools/dists.dss -f -s %d -u %d -C %d -S %d -T %s\n", scale, update, parallel, i, table));
           }
         }
         out.close();
