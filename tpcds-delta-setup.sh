@@ -75,6 +75,7 @@ do
       echo "Loading text data into external tables: iter #$i"
       runcommand "$HIVE  -i settings/load-flat.sql -f ddl-tpcds/text/deltatables.sql --hivevar DB_DIMS=tpcds_text_${SCALE} -hivevar DB_DELTA=tpcds_delta_text_${SCALE}_$i --hivevar LOCATION=${DIR}/${SCALE}_$i"
     } &
+    sleep 1
 done
 
 wait
