@@ -48,11 +48,16 @@ HIVE="beeline -n hive -u 'jdbc:hive2://localhost:2181/;serviceDiscoveryMode=zooK
 # Do the actual data load.
 hdfs dfs -mkdir -p ${DIR}
 
-for ((i=1;i<=$UPDATES;i++)); do
+# this gets the max number of processes for the user
+max_num_processes=$(ulimit -u)
+# An arbitrary limiting factor so that there are some free processes
+# in case I want to run something else
+limiting_factor=4
+num_processes=$((max_num_processes/limiting_factor))
+
+for ((i=1; i<=$UPDATES; i++))
 do
-    if test "$(jobs | wc -l)" -ge 8; then
-      wait -n
-    fi
+    ((i=i%num_processes)); ((i++==0)) && wait
     {
       hdfs dfs -ls ${DIR}/${SCALE}_$i > /dev/null
       if [ $? -ne 0 ]; then
