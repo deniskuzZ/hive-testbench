@@ -140,7 +140,7 @@ public class GenTable extends Configured implements Tool {
         FSDataOutputStream out = fs.create(in);
         for(int i = 1; i <= parallel; i++) {
           if(table.equals("all")) {
-            out.writeBytes(String.format("./dsdgen -dir $DIR -force Y -scale %d -u %d -parallel %d -child %d\n", scale, update, parallel, i));
+            out.writeBytes(String.format("./dsdgen -dir $DIR -scale %d -update %d\n", scale, update));
           } else {
             out.writeBytes(String.format("./dsdgen -dir $DIR -table %s -force Y -scale %d -u %d -parallel %d -child %d\n", table, scale, update, parallel, i));
           }
