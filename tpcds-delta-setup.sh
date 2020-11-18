@@ -25,7 +25,7 @@ fi
 
 # Get the parameters.
 SCALE=$1
-UPDATE=$2
+UPDATES=$2
 DIR=$3
 if [ "X$DEBUG_SCRIPT" != "X" ]; then
 	set -x
@@ -43,19 +43,36 @@ if [ $SCALE -eq 1 ]; then
 	exit 1
 fi
 
+HIVE="beeline -n hive -u 'jdbc:hive2://localhost:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2?tez.queue.name=default' "
+
 # Do the actual data load.
 hdfs dfs -mkdir -p ${DIR}
-hdfs dfs -ls ${DIR}/${SCALE} > /dev/null
-if [ $? -ne 0 ]; then
-	echo "Generating data at scale factor $SCALE."
-	(cd tpcds-gen; hadoop jar target/*.jar -d ${DIR}/${SCALE}/ -s ${SCALE} -u ${UPDATE})
-fi
-hdfs dfs -ls ${DIR}/${SCALE} > /dev/null
-if [ $? -ne 0 ]; then
-	echo "Data generation failed, exiting."
-	exit 1
-fi
 
-hadoop fs -chmod -R 777  ${DIR}/${SCALE}
+for ((i=1;i<=$UPDATES;i++)); do
+do
+    if test "$(jobs | wc -l)" -ge 8; then
+      wait -n
+    fi
+    {
+      hdfs dfs -ls ${DIR}/${SCALE}_$i > /dev/null
+      if [ $? -ne 0 ]; then
+        echo "Generating data at scale factor $SCALE."
+        (cd tpcds-gen; hadoop jar target/*.jar -d ${DIR}/${SCALE}_$i/ -s ${SCALE} -u ${UPDATE})
+      fi
+      hdfs dfs -ls ${DIR}/${SCALE}_$i > /dev/null
+      if [ $? -ne 0 ]; then
+        echo "Data generation failed, exiting."
+        exit 1
+      fi
+      hadoop fs -chmod -R 777  ${DIR}/${SCALE}_$i
 
-echo "TPC-DS text data generation complete."
+      # Create the text/flat tables as external tables. These will be later be converted to ORCFile.
+      echo "Loading text data into external tables."
+      runcommand "$HIVE  -i settings/load-flat.sql -f ddl-tpcds/text/deltatables.sql --hivevar DB_DIMS=tpcds_text_${SCALE} -hivevar DB_DELTA=tpcds_delta_text_${SCALE}_$i --hivevar LOCATION=${DIR}/${SCALE}_$i"
+    } &
+done
+
+wait
+echo "TPC-DS text data generation & load complete."
+
+
