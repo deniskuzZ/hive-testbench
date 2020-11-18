@@ -25,7 +25,7 @@ fi
 
 # Get the parameters.
 SCALE=$1
-UPDATES=$2
+DELTAS=$2
 DIR=$3
 if [ "X$DEBUG_SCRIPT" != "X" ]; then
 	set -x
@@ -55,24 +55,24 @@ max_num_processes=$(ulimit -u)
 limiting_factor=4
 num_processes=$((max_num_processes/limiting_factor))
 
-for ((i=1; i<=$UPDATES; i++))
+for ((i=1; i<=$DELTAS; i++))
 do
     ((i=i%num_processes)); ((i++==0)) && wait
     {
       hdfs dfs -ls ${DIR}/${SCALE}_$i > /dev/null
       if [ $? -ne 0 ]; then
-        echo "Generating data at scale factor $SCALE."
-        (cd tpcds-gen; hadoop jar target/*.jar -d ${DIR}/${SCALE}_$i/ -s ${SCALE} -u ${UPDATE})
+        echo "Generating data at scale factor $SCALE: iter #$i out of $DELTAS"
+        (cd tpcds-gen; hadoop jar target/*.jar -d ${DIR}/${SCALE}_$i/ -s ${SCALE} -u $i)
       fi
       hdfs dfs -ls ${DIR}/${SCALE}_$i > /dev/null
       if [ $? -ne 0 ]; then
-        echo "Data generation failed, exiting."
+        echo "Data generation failed, exiting: iter #$i"
         exit 1
       fi
       hadoop fs -chmod -R 777  ${DIR}/${SCALE}_$i
 
       # Create the text/flat tables as external tables. These will be later be converted to ORCFile.
-      echo "Loading text data into external tables."
+      echo "Loading text data into external tables: iter #$i"
       runcommand "$HIVE  -i settings/load-flat.sql -f ddl-tpcds/text/deltatables.sql --hivevar DB_DIMS=tpcds_text_${SCALE} -hivevar DB_DELTA=tpcds_delta_text_${SCALE}_$i --hivevar LOCATION=${DIR}/${SCALE}_$i"
     } &
 done
