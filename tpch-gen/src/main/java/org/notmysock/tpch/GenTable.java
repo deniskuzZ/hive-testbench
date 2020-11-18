@@ -159,7 +159,8 @@ public class GenTable extends Configured implements Tool {
       }
       BigInteger md5 = new BigInteger(md.digest()); 
       String md5hex = md5.toString(16);
-      Path dst = new Path(String.format("/tmp/%s.jar",md5hex));
+      long epoch = System.currentTimeMillis()/1000;
+      Path dst = new Path(String.format("/tmp/%s-%d.jar",md5hex, epoch));
       Path src = new Path(jar.toURI());
       FileSystem fs = FileSystem.get(getConf());
       fs.copyFromLocalFile(false, /*overwrite*/true, src, dst);
